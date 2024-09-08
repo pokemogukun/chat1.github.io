@@ -1,18 +1,28 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ja">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Chat Application</title>
+  <title>チャット</title>
   <script src="/socket.io/socket.io.js"></script>
   <script src="chat.js"></script>
 </head>
 <body>
   <div>
-    <h1>Chat Room</h1>
+    <h1>チャットルーム</h1>
     <div id="messages"></div>
+    
+    <!-- メッセージ送信フォーム -->
     <input id="message-input" type="text" placeholder="Type a message">
-    <button id="send-button">Send</button>
+    <button id="send-button">送る</button>
+
+    <!-- ファイル送信フォーム -->
+    <input type="file" id="file-input">
+    <button id="send-file-button">ファイルを送る</button>
+
+    <!-- メッセージ履歴を表示する -->
+    <h2>チャット履歴</h2>
+    <div id="history"></div>
   </div>
 </body>
 </html>
