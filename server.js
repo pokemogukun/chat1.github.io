@@ -3,9 +3,14 @@ const mongoose = require('mongoose');
 const bcrypt = require('bcrypt');
 const http = require('http');
 const socketIo = require('socket.io');
+const multer = require('multer');
+const path = require('path');
 const app = express();
 const server = http.createServer(app);
 const io = socketIo(server);
+
+// ファイルアップロード用の設定
+const upload = multer({ dest: 'uploads/' });
 
 // MongoDB接続設定
 mongoose.connect('mongodb+srv://<username>:<password>@cluster0.mongodb.net/chat-app', {
@@ -20,11 +25,14 @@ const userSchema = new mongoose.Schema({
   username: { type: String, required: true, unique: true },
   password: { type: String, required: true },
   chatHistory: [{ message: String, timestamp: Date }],
+  files: [{ filename: String, path: String, timestamp: Date }],
 });
 
 const User = mongoose.model('User', userSchema);
 
 app.use(express.json());
+app.use(express.static('public')); // フロントエンドファイル用
+app.use('/uploads', express.static('uploads')); // アップロードしたファイルを公開
 
 // パスワードをハッシュ化する関数
 const hashPassword = async (password) => {
@@ -93,6 +101,38 @@ app.get('/chat-history/:username', async (req, res) => {
     res.status(200).json(user.chatHistory);
   } catch (err) {
     res.status(500).send('Error retrieving chat history');
+  }
+});
+
+// ファイルアップロード
+app.post('/upload-file', upload.single('file'), async (req, res) => {
+  const { username } = req.body;
+  try {
+    const user = await User.findOne({ username });
+    if (!user) return res.status(404).send('User not found');
+
+    user.files.push({
+      filename: req.file.originalname,
+      path: req.file.path,
+      timestamp: new Date(),
+    });
+    await user.save();
+    res.status(200).send('File uploaded and saved');
+  } catch (err) {
+    res.status(500).send('Error uploading file');
+  }
+});
+
+// ファイル履歴を取得
+app.get('/file-history/:username', async (req, res) => {
+  const { username } = req.params;
+  try {
+    const user = await User.findOne({ username });
+    if (!user) return res.status(404).send('User not found');
+
+    res.status(200).json(user.files);
+  } catch (err) {
+    res.status(500).send('Error retrieving file history');
   }
 });
 
