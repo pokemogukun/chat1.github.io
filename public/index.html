@@ -3,26 +3,109 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>チャット</title>
+  <title>チャットアプリケーション</title>
   <script src="/socket.io/socket.io.js"></script>
   <script src="chat.js"></script>
 </head>
 <body>
-  <div>
-    <h1>チャットルーム</h1>
-    <div id="messages"></div>
-    
-    <!-- メッセージ送信フォーム -->
-    <input id="message-input" type="text" placeholder="Type a message">
-    <button id="send-button">送る</button>
+  <h1>チャットルーム</h1>
+  <div id="messages"></div>
 
-    <!-- ファイル送信フォーム -->
+  <input id="message-input" type="text" placeholder="メッセージを入力してください">
+  <button id="send-button">送信</button>
+
+  <!-- ファイルアップロード機能 -->
+  <h2>ファイルをアップロード</h2>
+  <form id="file-upload-form">
     <input type="file" id="file-input">
-    <button id="send-file-button">ファイルを送る</button>
+    <button type="submit">アップロード</button>
+  </form>
 
-    <!-- メッセージ履歴を表示する -->
-    <h2>チャット履歴</h2>
-    <div id="history"></div>
-  </div>
+  <!-- チャット履歴表示 -->
+  <h2>チャット履歴</h2>
+  <button id="load-history">チャット履歴を読み込む</button>
+  <div id="chat-history"></div>
+
+  <!-- ファイル履歴表示 -->
+  <h2>ファイル履歴</h2>
+  <button id="load-file-history">ファイル履歴を読み込む</button>
+  <div id="file-history"></div>
+
+  <script>
+    const username = prompt('ユーザー名を入力してください:');
+    const socket = io();
+
+    // メッセージ送信
+    document.getElementById('send-button').addEventListener('click', () => {
+      const message = document.getElementById('message-input').value;
+      fetch('/send-message', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, message })
+      }).then(() => {
+        socket.emit('chat message', message);
+        document.getElementById('message-input').value = '';
+      });
+    });
+
+    // メッセージ受信
+    socket.on('chat message', (msg) => {
+      const messages = document.getElementById('messages');
+      const messageElement = document.createElement('div');
+      messageElement.textContent = msg;
+      messages.appendChild(messageElement);
+    });
+
+    // チャット履歴読み込み
+    document.getElementById('load-history').addEventListener('click', () => {
+      fetch(`/chat-history/${username}`)
+        .then(response => response.json())
+        .then(data => {
+          const historyDiv = document.getElementById('chat-history');
+          historyDiv.innerHTML = '';
+          data.forEach(item => {
+            const historyElement = document.createElement('div');
+            historyElement.textContent = `${item.timestamp}: ${item.message}`;
+            historyDiv.appendChild(historyElement);
+          });
+        });
+    });
+
+    // ファイルアップロード
+    document.getElementById('file-upload-form').addEventListener('submit', (event) => {
+      event.preventDefault();
+      const fileInput = document.getElementById('file-input');
+      const formData = new FormData();
+      formData.append('file', fileInput.files[0]);
+      formData.append('username', username);
+
+      fetch('/upload-file', {
+        method: 'POST',
+        body: formData,
+      }).then(() => {
+        alert('ファイルが正常にアップロードされました');
+      });
+    });
+
+    // ファイル履歴読み込み
+    document.getElementById('load-file-history').addEventListener('click', () => {
+      fetch(`/file-history/${username}`)
+        .then(response => response.json())
+        .then(data => {
+          const fileHistoryDiv = document.getElementById('file-history');
+          fileHistoryDiv.innerHTML = '';
+          data.forEach(file => {
+            const fileElement = document.createElement('div');
+            const link = document.createElement('a');
+            link.href = file.path;
+            link.textContent = file.filename;
+            link.target = '_blank';
+            fileElement.textContent = `${file.timestamp}: `;
+            fileElement.appendChild(link);
+            fileHistoryDiv.appendChild(fileElement);
+          });
+        });
+    });
+  </script>
 </body>
 </html>
